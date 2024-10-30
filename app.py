@@ -19,6 +19,17 @@ def get_db_connection():
     #return the connection object
     return conn
 
+# function to retrieve post from database
+def get_post(post_id):
+    conn = get_db_connection()
+    post = conn.execute("SELECT * FROM posts WHERE id = ?", (post_id, )).fetchone()
+    conn.close()
+
+    if post is None:
+        abort(404)
+
+    return post
+
 # use the app.route() decorator to create a Flask view function called index()
 @app.route('/')
 def index():
@@ -57,5 +68,31 @@ def create():
             return redirect(url_for('index'))
 
     return render_template('create.html')
+
+#route to edit a post
+@app.route('/<int:id>/edit/', methods=['GET', 'POST'])
+def edit(id):
+    #get post to be edited from db
+    post = get_post(id)
+
+    if request.method == 'POST':
+        #get form data
+        title = request.form['title']
+        content = request.form['content']
+
+        #display error if form item is blank
+        if not title:
+            flash("Title is required")
+        elif not content:
+            flash("Content is required")
+        else:
+            conn = get_db_connection()
+            #insert data into db
+            conn.execute('UPDATE posts SET title = ?, content = ? WHERE id = ?', (title, content, id)) 
+            conn.commit()
+            conn.close()
+            return redirect(url_for('index'))
+
+    return render_template('edit.html', post=post)
 
 app.run()
